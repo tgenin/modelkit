@@ -665,6 +665,35 @@ def test_model_dependencies_bad_get():
     lib.get("some_model_dep")
 
 
+def test_model_dependencies_get_None():
+    class SomeModel(Model):
+        CONFIGURATIONS = {"some_model": {}}
+
+        def _predict(self, item):
+            return item
+
+    class SomeModelDep(Model):
+        CONFIGURATIONS = {
+            "some_model_dep_0": {"model_dependencies": {"some_model": "some_model"}},
+            "some_model_dep_1": {"model_dependencies": {}},
+        }
+
+        def _load(self):
+            self.some_model = self.model_dependencies.get("some_model")
+
+        def _predict(self, item):
+            return item
+
+    lib = ModelLibrary(
+        models=[SomeModel, SomeModelDep],
+        required_models=["some_model_dep_0", "some_model_dep_1"],
+    )
+    some_model_dep_0 = lib.get("some_model_dep_0")
+    some_model_dep_1 = lib.get("some_model_dep_1")
+    assert type(some_model_dep_0.some_model) == SomeModel
+    assert some_model_dep_1.some_model is None
+
+
 def test_asset_dependencies():
     """
     Test that MyAsset can have model dependencies of any kind
